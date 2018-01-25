@@ -1,0 +1,10 @@
+1.	a) mkdir tutorials
+	b)touch tutorial1
+	c)cp tutorial1 tutorial_1
+	d)rm tutorial1
+
+2. ln -s /work/tutorials/tutorial_1
+
+3.grep -r 'stdin'
+
+4.find . -name 'tutorial*' > out.txt 2>error.log

@@ -1,0 +1,4 @@
+  PID TTY          TIME CMD
+ 2232 pts/12   00:00:00 bash
+ 3290 pts/12   00:00:00 question_5.sh
+ 3291 pts/12   00:00:00 ps
