@@ -3,138 +3,147 @@
 #include <stdio.h>
 #include <string.h>
 
-
-int valid[3][9];
-int** sud_board;
+int **board;
 pthread_t* threads;
 
+int row_valid = 0;
+int col_valid = 0;
+int cell_valid = 0;
 
-int ROW_LEN = 9;
-int COL_LEN = 9;
-int NUM_ROW = 9;
-int NUM_COL = 9;
-int NUM_CELL = 9;
-int NUM_THREADS = 11;
+void create_board(){
+  board = (int**) malloc(9*sizeof(int*));
+  for(int i = 0; i < 9; i++) {
+    *(board + i) = (int *)malloc(9*sizeof(int));
+  }
+}
 
-void check_row(int row_num) {
-    int row_n = row_num;
-	  int vals[9] = { 0 };
-   	for(int i = 0; i < NUM_ROW; i++) {
-        int index = sud_board[row_n][i] - 1;
+void validate_row(int row) {
+	int vals[9] = { 0 };
+  for(int i = 0; i < 9; i++) {
+        int index = board[row][i] - 1;
         if (index != -1) {
             vals[index] += 1;
         }
    	}
 
-    int check_valid = 1;
     for (int i = 0; i < 9; i++) {
-        if (vals[i] != 1) {
-            check_valid = 0;
+        if (vals[i] == 1) {
+          row_valid = 1;
+          return;
         }
     }
-    valid[0][row_n] = check_valid;
-    return;
 }
 
 void* check_rows(void* n) {
-    for (int i = 0; i < NUM_COL; i++) {
-        check_row(i);
+    for (int i = 0; i < 9; i++) {
+        validate_row(i);
+    }
+    if(row_valid == 1){
+      printf("%s\n", "INVALID ROW, THIS PUZZLE IS INVALID");
+    }
+    else {
+      printf("%s\n", "ROW VALID");
     }
     pthread_exit(NULL);
 }
 
-void check_column(int col_num) {
-    int col_n = col_num;
+void validate_col(int col) {
 	  int vals[9] = { 0 };
-   	for(int i = 0; i < NUM_COL; i++) {
-        int index = sud_board[i][col_n] - 1;
+   	for(int i = 0; i < 9; i++) {
+        int index = board[i][col] - 1;
         if (index != -1) {
             vals[index] += 1;
         }
    	}
-    int check_valid = 1;
+    int is_valid = 1;
     for (int i = 0; i < 9; i++) {
-        if (vals[i] != 1) {
-            check_valid = 0;
+        if (vals[i] == 1) {
+            col_valid = 1;
+            return;
         }
     }
-    valid[1][col_n] = check_valid;
-    return;
 }
 
-void* check_columns(void* n) {
-    for (int i = 0; i < NUM_COL; i++) {
-        check_column(i);
+void* check_cols(void* n) {
+    for (int i = 0; i < 9; i++) {
+        validate_col(i);
     }
-    
+
+    if(row_valid == 1){
+      printf("%s\n", "INVALID COLUMN, THIS PUZZLE IS INVALID");
+    }
+    else {
+      printf("%s\n", "COLUMN VALID");
+    }
     pthread_exit(NULL);
 }
 
-void* check_cell(void* cell_num) {
-    int cell_n = *((int*) cell_num);
+void* check_cell(int cell) {
+  int vals[9] = { 0 };
 
-    int vals[9] = { 0 };
-
-    int row_n = (cell_n / 3) * 3;
-    int col_n = (cell_n % 3) * 3;
+    int row_n = (cell / 3) * 3;
+    int col_n = (cell % 3) * 3;
     for (int i = 0; i < 3; i++) {
-        for (int j = 0; j < 3; j++) {
-            if (sud_board[row_n+i][col_n+j] != 0) {
-                int index = sud_board[row_n+i][col_n+j] - 1;
-                if (index != -1) {
-                    vals[index] += 1;
-                }
-            }
+      for (int j = 0; j < 3; j++) {
+        if (board[row_n+i][col_n+j] != 0) {
+          int index = board[row_n+i][col_n+j] - 1;
+          vals[index] += 1;
         }
+      }
+    }
+
+    int is_valid = 1;
+    for (int i = 0; i < 9; i++) {
+        if (vals[i] == 1) {
+          cell_valid = 1;
+          break;
+        }
+    }
+
+    if(row_valid == 1){
+      printf("%s\n", "INVALID CELL, THIS PUZZLE IS INVALID");
+    }
+    else {
+      printf("%s\n", "CELL VALID");
     }
     pthread_exit(NULL);
 }
-
-int** init_sud_board() {
-    sud_board = (int**) malloc(NUM_ROW*sizeof(int*));
-    for (int i = 0; i < NUM_ROW; i++) {
-        *(sud_board+i) = (int*) malloc(NUM_COL*sizeof(int));
-    }
-
-
-    return sud_board;
-}
-
-
 
 int main(int argc, char *argv[]) {
-  sud_board = init_sud_board();
+  create_board();
+
   FILE* f = fopen("puzzle.txt", "r");
   int d = 0;
   int i = 0;
   while (fscanf(f, "%d", &d) != EOF) {
-      sud_board[i / 9][i % 9] = d;
+      board[i / 9][i % 9] = d;
       i++;
   }
 
-  threads = (pthread_t*)calloc(NUM_THREADS, sizeof(pthread_t));
+  threads = calloc(11, sizeof(pthread_t));
+
+  //Thread to check rows
   pthread_create(threads, NULL, check_rows, 0);
-  pthread_create(threads+1, NULL, check_columns, 0);
-  int* cells = (int*) malloc(NUM_CELL*sizeof(int));
 
+  //Thread to check columns
+  pthread_create(threads+1, NULL, check_cols, 0);
 
-  for (int i = 0; i < NUM_THREADS-2; i++){
-      cells[i] = i;
-      pthread_create(threads+i+2, NULL, check_cell, (void*) &cells[i]);
-  }
+  //Thread to chck cells
+  int* cells = (int*) malloc(9*sizeof(int));
+  pthread_create(threads+2, NULL, check_cell,(void *) &cells[i]);
+  pthread_create(threads+3, NULL, check_cell, (void *) &cells[i]);
+  pthread_create(threads+4, NULL, check_cell, (void *) &cells[i]);
+  pthread_create(threads+5, NULL, check_cell, (void *) &cells[i]);
+  pthread_create(threads+6, NULL, check_cell, (void *) &cells[i]);
+  pthread_create(threads+7, NULL, check_cell, (void *) &cells[i]);
+  pthread_create(threads+8, NULL, check_cell, (void *) &cells[i]);
+  pthread_create(threads+9, NULL, check_cell, (void *) &cells[i]);
+  pthread_create(threads+10, NULL, check_cell, (void *) &cells[i]);
+  pthread_create(threads+11, NULL, check_cell, (void *) &cells[i]);
 
-  int s;
-  
-  for (int i = 2; i < NUM_THREADS; i++) {
-      s = pthread_join(threads[i], NULL);
+  for (int i = 0; i < 11; i++) {
+    pthread_join(threads[i],NULL);
   }
-  
-  for (int i = 0; i < NUM_ROW; i++) {
-      free(sud_board[i]);
-  }
-  free(sud_board);
-  free(threads);
-  free(cells);
 
   return 0;
 }
